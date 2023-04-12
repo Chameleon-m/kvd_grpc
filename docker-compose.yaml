@@ -17,7 +17,7 @@ services:
       timeout: 5s
       retries: 5
     environment:
-      LIBRARY_SERVER_HOST: ${LIBRARY_SERVER_HOST:-localhost}
+      LIBRARY_SERVER_HOST: ${LIBRARY_SERVER_HOST:-}
       LIBRARY_SERVER_PORT: ${LIBRARY_SERVER_PORT:-50051}
       DB_USER: ${DB_USER:-librarian}
       DB_PASSWORD: ${DB_PASSWORD:-librarianpassword}
@@ -36,7 +36,8 @@ services:
   db:
     container_name: db
     platform: linux/amd64
-    image: mysql:8.0.32
+    build:
+      dockerfile: ./deployments/docker/mysql/Dockerfile
     environment:
       MYSQL_DATABASE: ${DB_NAME:-library}
       MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-rootpassword}
@@ -46,7 +47,6 @@ services:
     healthcheck:
       test: mysqladmin ping -ppass
     volumes:
-      - ./deployments/docker/mysql/conf.d:/etc/mysql/conf.d
       - mysqlData:/var/lib/mysql
     ports:
       - "3306:3306"
