@@ -1,0 +1,24 @@
+syntax = "proto3";
+package kvado;
+
+option go_package = "/internal/library/transport/grpc/handlers/book";
+
+service Book {
+    rpc getByAuthor(AuthorRequest) returns (BookListResponse);
+}
+
+// книга
+message BookItem {
+    uint64 id = 1;
+    string name = 2;
+}
+
+// список книг
+message BookListResponse {
+    repeated BookItem items = 1; 
+}
+
+// автор запрос 
+message AuthorRequest {
+    uint64 id = 1;
+}
