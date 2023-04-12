@@ -8,7 +8,10 @@ import (
 	"os/signal"
 	"syscall"
 
+	healthprobe "github.com/Chameleon-m/kvd_grpc/internal/app/library/transport/grpc/handlers/health_probe"
+
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/health/grpc_health_v1"
 	"google.golang.org/grpc/reflection"
 )
 
@@ -36,6 +39,8 @@ func RunGRPCServer() {
 	// Cоздаём сервер gRPC
 	srv := grpc.NewServer()
 
+	// Регистрируем обработчик health probe
+	grpc_health_v1.RegisterHealthServer(srv, healthprobe.NewChecker())
 	// Зарегистрируйте службу отражения на сервере gRPC.
 	reflection.Register(srv)
 
