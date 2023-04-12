@@ -2,15 +2,15 @@ package model
 
 // Book ...
 type Book struct {
-	ID   int64
+	ID   uint64
 	Name string
 }
 
 // BookList ...
-type BookList []*Author
+type BookList []*Book
 
 // NewBook create new Book model
-func NewBook(id int64, name string) (*Book, error) {
+func NewBook(id uint64, name string) (*Book, error) {
 	m := &Book{
 		ID:   id,
 		Name: name,

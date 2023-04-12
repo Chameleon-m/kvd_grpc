@@ -33,7 +33,8 @@ func NewHandler(
 	}
 }
 
-// GetByAuthor реализует kvado.Book.getByAuthor
+// GetByAuthor список книг по автору
+// реализует kvado.Book.getByAuthor
 func (s *Book) GetByAuthor(ctx context.Context, in *AuthorRequest) (*BookListResponse, error) {
 
 	// Проверяем Deadline запроса

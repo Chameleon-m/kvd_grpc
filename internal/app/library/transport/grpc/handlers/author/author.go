@@ -33,7 +33,8 @@ func NewHandler(
 	}
 }
 
-// GetByAuthor реализует kvado.Auhor.getByBook
+// GetByBook список авторов по книге
+// реализует kvado.Auhor.getByBook
 func (s *Author) GetByBook(ctx context.Context, in *BookRequest) (*AuthorListResponse, error) {
 
 	// Проверяем Deadline запроса
@@ -56,11 +57,11 @@ func (s *Author) GetByBook(ctx context.Context, in *BookRequest) (*AuthorListRes
 	}
 
 	// Собираем ответ
-	return &AuthorListResponse{Items: makeBookList(model.BookList(authorList))}, status.New(codes.OK, "").Err()
+	return &AuthorListResponse{Items: makeAuthorList(authorList)}, status.New(codes.OK, "").Err()
 }
 
 // Преобразуем с моделей в grpc структуры
-func makeBookList(list model.BookList) []*AuthorItem {
+func makeAuthorList(list model.AuthorList) []*AuthorItem {
 	items := make([]*AuthorItem, 0, len(list))
 	for _, v := range list {
 		items = append(items, &AuthorItem{Id: v.ID, Name: v.Name})

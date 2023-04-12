@@ -43,6 +43,7 @@ func RunGRPCServer() {
 	dbConfig.Passwd = os.Getenv("DB_PASSWORD")
 	dbConfig.DBName = os.Getenv("DB_NAME")
 	// dbConfig.Timeout = time.Second*1
+	// dbConfig.InterpolateParams = true
 	db, err := sql.Open("mysql", dbConfig.FormatDSN())
 	if err != nil {
 		log.Println(err)
@@ -50,13 +51,13 @@ func RunGRPCServer() {
 	}
 
 	// Время жизни соединения
-	db.SetConnMaxLifetime(time.Minute * 5)
+	db.SetConnMaxLifetime(time.Second * 15)
 	// Время ожидания в пуле
 	db.SetConnMaxIdleTime(time.Second * 5)
 	// Максимальное количество соединений
-	db.SetMaxOpenConns(10)
+	db.SetMaxOpenConns(150)
 	// Ограничение размера пула
-	db.SetMaxIdleConns(10)
+	db.SetMaxIdleConns(150)
 	// Закрываем соединение
 	defer func() {
 		if err := db.Close(); err != nil {
