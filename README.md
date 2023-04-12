@@ -41,6 +41,40 @@ or
 $env:DB_URI = 'mysql://librarian:librarianpassword@tcp(db:3306)/library';make migrate-up-docker
 ```
 
+## Тест
+Установить 
+```
+go install github.com/fullstorydev/grpcurl/cmd/grpcurl@latest
+```
+```
+grpcurl -plaintext 127.0.0.1:50051 list
+grpcurl -plaintext 127.0.0.1:50051 grpc.health.v1.Health.Check
+grpcurl -plaintext -d '{\"id\":1}' 127.0.0.1:50051 kvado.Author.getByBook
+grpcurl -plaintext -d '{\"id\":1}' 127.0.0.1:50051 kvado.Book.getByAuthor
+```
+
+# Нагрузочное тестирование
+Инструмент - https://ghz.sh/
+https://github.com/bojand/ghz
+```
+go install github.com/bojand/ghz/cmd/ghz@latest
+```
+```
+ghz --insecure --call kvado.Author.getByBook -d '{\"id\":1}' -n 100000 -c150 0.0.0.0:50051
+ghz --insecure --call kvado.Book.getByAuthor -d '{\"id\":1}' -n 100000 -c150 0.0.0.0:50051
+or
+ghz --insecure --config testdata/ghz/kvado.Author.getByBook.json
+ghz --insecure --config testdata/ghz/kvado.Book.getByAuthor.json
+```
+
+Summary:
+  Count:        100000
+  Total:        7.74 s
+  Slowest:      106.71 ms
+  Fastest:      1.03 ms
+  Average:      14.56 ms
+  Requests/sec: 12918.19
+
 # MAIN COMMANDS
 ```
 make build

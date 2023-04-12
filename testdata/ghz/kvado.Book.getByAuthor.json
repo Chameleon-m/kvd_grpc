@@ -1,0 +1,9 @@
+{
+    "call": "kvado.Book.getByAuthor",
+    "total": 100000,
+    "concurrency": 150,
+    "data": {
+        "id": 1
+    },
+    "host": "0.0.0.0:50051"
+}
