@@ -2,14 +2,21 @@ package library
 
 import (
 	"context"
+	"database/sql"
 	"log"
 	"net"
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
+	"github.com/Chameleon-m/kvd_grpc/internal/app/library/repository"
+	"github.com/Chameleon-m/kvd_grpc/internal/app/library/service"
+	"github.com/Chameleon-m/kvd_grpc/internal/app/library/transport/grpc/handlers/author"
+	"github.com/Chameleon-m/kvd_grpc/internal/app/library/transport/grpc/handlers/book"
 	healthprobe "github.com/Chameleon-m/kvd_grpc/internal/app/library/transport/grpc/handlers/health_probe"
 
+	mysql "github.com/go-sql-driver/mysql"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/health/grpc_health_v1"
 	"google.golang.org/grpc/reflection"
@@ -28,17 +35,64 @@ func RunGRPCServer() {
 	ctx, ctxCancel := context.WithCancel(context.Background())
 	defer ctxCancel()
 
+	// Настраиваем соединение с DB
+	dbConfig := mysql.NewConfig()
+	dbConfig.Net = "tcp"
+	dbConfig.Addr = os.Getenv("DB_ADDR")
+	dbConfig.User = os.Getenv("DB_USER")
+	dbConfig.Passwd = os.Getenv("DB_PASSWORD")
+	dbConfig.DBName = os.Getenv("DB_NAME")
+	// dbConfig.Timeout = time.Second*1
+	db, err := sql.Open("mysql", dbConfig.FormatDSN())
+	if err != nil {
+		log.Println(err)
+		return
+	}
+
+	// Время жизни соединения
+	db.SetConnMaxLifetime(time.Minute * 5)
+	// Время ожидания в пуле
+	db.SetConnMaxIdleTime(time.Second * 5)
+	// Максимальное количество соединений
+	db.SetMaxOpenConns(10)
+	// Ограничение размера пула
+	db.SetMaxIdleConns(10)
+	// Закрываем соединение
+	defer func() {
+		if err := db.Close(); err != nil {
+			log.Println("close error:", err)
+		}
+	}()
+	// Проверяем соединение с базой данных
+	if err := db.PingContext(ctx); err != nil {
+		log.Println(err)
+		return
+	}
+	// Передаём логер драйверу mysql
+	if err := mysql.SetLogger(log.Default()); err != nil {
+		log.Println(err)
+		return
+	}
+
 	// Слушаем tcp порт
 	host := os.Getenv("LIBRARY_SERVER_HOST")
 	port := os.Getenv("LIBRARY_SERVER_PORT")
 	lsn, err := net.Listen("tcp", net.JoinHostPort(host, port))
 	if err != nil {
-		log.Fatalf("failde to listen: %v", err)
+		log.Printf("failde to listen: %v", err)
+		return
 	}
 
 	// Cоздаём сервер gRPC
 	srv := grpc.NewServer()
-
+	// Регистрируем обработчики книг
+	mysqlBookRepository := repository.NewBookMysqlRepository(db)
+	bookService := service.NewBookService(mysqlBookRepository)
+	book.RegisterBookServer(srv, book.NewHandler(ctx, bookService))
+	// Регистрируем обработчики авторов
+	mysqlAuthorRepository := repository.NewAuthorMysqlRepository(db)
+	authorService := service.NewAuthorService(mysqlAuthorRepository)
+	author.RegisterAuthorServer(srv, author.NewHandler(ctx, authorService))
 	// Регистрируем обработчик health probe
 	grpc_health_v1.RegisterHealthServer(srv, healthprobe.NewChecker())
 	// Зарегистрируйте службу отражения на сервере gRPC.
@@ -65,7 +119,9 @@ func RunGRPCServer() {
 	go func() {
 		// Запускаем сервер
 		if err := srv.Serve(lsn); err != nil {
-			log.Fatalf("failed to serve: %v", err)
+			log.Printf("failed to serve: %v", err)
+			// Завершаем контекст
+			ctxCancel()
 		}
 	}()
 
