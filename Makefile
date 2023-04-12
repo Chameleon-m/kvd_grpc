@@ -1,3 +1,11 @@
+ifneq (test, ${ENV_MODE})
+    migrateArgs := -source file://migrations -database "${DB_URI}?x-tls-insecure-skip-verify=false" -verbose # x-statement-timeout
+else
+    migrateArgs := -source file://migrations -database "${DB_URI_TEST}?x-tls-insecure-skip-verify=false" -verbose
+endif
+
+# $(CURDIR) fix old docker version for Windows
+dockerMigrate := docker run --name migrate --rm -i --volume="$(CURDIR)/migrations:/migrations" --network netApplication migrate/migrate:v4.15.2
 
 BIN_DIR = $(PWD)/bin
 
@@ -25,6 +33,36 @@ fmt: ## gofmt and goimports all go files
 build-protoc:
 	@protoc --proto_path=internal/app/library/proto --go_out=internal/app/library/transport/grpc/handlers/author --go_opt=paths=source_relative --go-grpc_out=internal/app/library/transport/grpc/handlers/author --go-grpc_opt=paths=source_relative internal/app/library/proto/author.proto
 	@protoc --proto_path=internal/app/library/proto --go_out=internal/app/library/transport/grpc/handlers/book --go_opt=paths=source_relative --go-grpc_out=internal/app/library/transport/grpc/handlers/book --go-grpc_opt=paths=source_relative internal/app/library/proto/book.proto
+
+migrate-up:
+	migrate $(migrateArgs) up $(if $n,$n,)
+migrate-down:
+	migrate $(migrateArgs) down $(if $n,$n,)
+migrate-goto:
+	migrate $(migrateArgs) goto $(v)
+migrate-force:
+	migrate $(migrateArgs) force $(v)
+migrate-drop:
+	migrate $(migrateArgs) drop
+migrate-version:
+	migrate $(migrateArgs) version
+migrate-create-sql:
+	migrate $(migrateArgs) create -ext sql -dir migrations $(name)
+
+migrate-up-docker: 
+	$(dockerMigrate) $(migrateArgs) up $(if $n,$n,)
+migrate-down-docker:
+	$(dockerMigrate) $(migrateArgs) down $(if $n,$n,)
+migrate-goto-docker:
+	$(dockerMigrate) $(migrateArgs) goto $(v)
+migrate-force-docker:
+	$(dockerMigrate) $(migrateArgs) force $(v)
+migrate-drop-docker:
+	$(dockerMigrate) $(migrateArgs) drop
+migrate-version-docker:
+	$(dockerMigrate) $(migrateArgs) version
+migrate-create-sql-docker:
+	$(dockerMigrate) $(migrateArgs) create -ext sql -dir migrations $(name)
 
 test:
 	go test -tags testing ./...

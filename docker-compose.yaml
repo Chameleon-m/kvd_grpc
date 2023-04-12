@@ -1,0 +1,62 @@
+version: "3.7"
+
+services:
+
+  library_server:
+    container_name: library_server
+    build:
+      dockerfile: ./deployments/docker/library_server/Dockerfile
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "bin/grpc_health_probe",
+          "-addr=${LIBRARY_SERVER_HOST:-localhost}:${LIBRARY_SERVER_PORT:-50051}"
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    environment:
+      LIBRARY_SERVER_HOST: ${LIBRARY_SERVER_HOST:-localhost}
+      LIBRARY_SERVER_PORT: ${LIBRARY_SERVER_PORT:-50051}
+      DB_USER: ${DB_USER:-librarian}
+      DB_PASSWORD: ${DB_PASSWORD:-librarianpassword}
+      DB_ADDR: ${DB_ADDR:-db:3306}
+      DB_NAME: ${DB_NAME:-library}
+    depends_on:
+      db:
+        condition: service_healthy
+    external_links:
+      - db
+    ports:
+      - "50051:50051"
+    networks:
+      - netApplication
+
+  db:
+    container_name: db
+    platform: linux/amd64
+    image: mysql:8.0.32
+    environment:
+      MYSQL_DATABASE: ${DB_NAME:-library}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-rootpassword}
+      MYSQL_USER: ${DB_USER:-librarian}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-librarianpassword}
+    command: --default-authentication-plugin=mysql_native_password
+    healthcheck:
+      test: mysqladmin ping -ppass
+    volumes:
+      - ./deployments/docker/mysql/conf.d:/etc/mysql/conf.d
+      - mysqlData:/var/lib/mysql
+    ports:
+      - "3306:3306"
+    networks:
+      - netApplication
+
+volumes:
+  mysqlData:
+
+
+networks:
+  netApplication:
+    name: netApplication

@@ -1,10 +1,52 @@
 # kvd_grpc
 
+# Запуск gRPC сервера и DB
+
+Настроить переменные окружения, смотри раздел ENV
+Настроить hosts, смотри в конце
+
+## Вариант 1 docker
+```
+// Создаём сеть
+docker network create netApplication
+// Заускаем mysql
+docker run --name=db --network=netApplication --hostname=db -p 3306:3306 -v ./deployments/docker/mysql/conf.d:/etc/mysql/conf.d -e MYSQL_ROOT_PASSWORD=secret -e MYSQL_DATABASE=library -e MYSQL_USER=librarian -e MYSQL_PASSWORD=librarianpassword -d mysql:8.0.32
+// Собираем сервер
+make build
+// Накатываем миграции (подробней смотри раздел "Запускаем миграции")
+make migrate-up
+// Заупскаем сервер
+./bin/library_grpc_server
+
+```
+
+## Вариант 2 docker-compose
+```
+docker-compose up -d
+// Накатываем миграции (подробней смотри раздел "Запускаем миграции")
+make migrate-up
+```
+
+## Запускаем миграции
+Linux
+```
+DB_URI='mysql://librarian:librarianpassword@tcp(db:3306)/library' make migrate-up
+or
+DB_URI='mysql://librarian:librarianpassword@tcp(db:3306)/library' make migrate-up-docker
+```
+Windows
+```
+$env:DB_URI = 'mysql://librarian:librarianpassword@tcp(db:3306)/library';make migrate-up
+or
+$env:DB_URI = 'mysql://librarian:librarianpassword@tcp(db:3306)/library';make migrate-up-docker
+```
+
 # MAIN COMMANDS
 ```
 make build
 make test
 make lints
+make migrate-up
 make build-protoc
 # ... смотри Makefile
 ```
@@ -29,7 +71,7 @@ sudo apt install protobuf-compiler
 ```
 Для win
 1) Скачать https://github.com/protocolbuffers/protobuf/releases 
-2) Добавить в enc PATH
+2) Добавить путь в env PATH
 
 
 ```
@@ -41,3 +83,16 @@ go install github.com/golang/mock/mockgen@latest
 ```
 make build-protoc
 ```
+
+Создание миграции
+```
+make migrate-create-sql name="init"
+```
+
+## Update hostnames
+Once the replica set is up, you will need to update hostnames in local /etc/hosts file.
+```
+127.0.0.1 db library_server
+# ...
+```
+**NOTE**: In windows, the hosts file is located at C:\Windows\System32\drivers\etc\hosts
