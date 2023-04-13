@@ -25,5 +25,8 @@ func NewAuthorService(authorRepo AuthorRepositoryInterface) *AuthorService {
 
 // Список авторов по книге
 func (s AuthorService) GetListByBook(ctx context.Context, id uint64) (model.AuthorList, error) {
+	if id == 0 {
+		return nil, ErrInvalidId
+	}
 	return s.authorRepo.FindAllByBook(ctx, id)
 }

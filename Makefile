@@ -34,6 +34,10 @@ build-protoc:
 	@protoc --proto_path=internal/app/library/proto --go_out=internal/app/library/transport/grpc/handlers/author --go_opt=paths=source_relative --go-grpc_out=internal/app/library/transport/grpc/handlers/author --go-grpc_opt=paths=source_relative internal/app/library/proto/author.proto
 	@protoc --proto_path=internal/app/library/proto --go_out=internal/app/library/transport/grpc/handlers/book --go_opt=paths=source_relative --go-grpc_out=internal/app/library/transport/grpc/handlers/book --go-grpc_opt=paths=source_relative internal/app/library/proto/book.proto
 
+build-mocks:
+	@mockgen -source internal/app/library/service/author.go -destination internal/app/library/service/author_mock.go -package service
+	@mockgen -source internal/app/library/service/book.go -destination internal/app/library/service/book_mock.go -package service
+
 migrate-up:
 	migrate $(migrateArgs) up $(if $n,$n,)
 migrate-down:
