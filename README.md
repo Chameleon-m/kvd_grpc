@@ -5,7 +5,16 @@
 Настроить переменные окружения, смотри раздел ENV
 Настроить hosts, смотри в конце
 
-## Вариант 1 docker
+## Вариант 1 docker-compose
+```
+docker-compose up -d
+// Накатываем миграции (подробней смотри раздел "Запускаем миграции")
+make migrate-up
+// Накатываем данные
+docker exec -i db sh -c 'exec mysql -uroot -p"$MYSQL_ROOT_PASSWORD"' < testdata/data.sql
+```
+
+## Вариант 2 docker
 ```
 // Создаём сеть
 docker network create netApplication
@@ -15,16 +24,10 @@ docker run --name=db --network=netApplication --hostname=db -p 3306:3306 -v ./de
 make build
 // Накатываем миграции (подробней смотри раздел "Запускаем миграции")
 make migrate-up
+// Накатываем данные
+docker exec -i db sh -c 'exec mysql -uroot -p"$MYSQL_ROOT_PASSWORD"' < testdata/data.sql
 // Заупскаем сервер
 ./bin/library_grpc_server
-
-```
-
-## Вариант 2 docker-compose
-```
-docker-compose up -d
-// Накатываем миграции (подробней смотри раздел "Запускаем миграции")
-make migrate-up
 ```
 
 ## Запускаем миграции
@@ -40,8 +43,13 @@ $env:DB_URI = 'mysql://librarian:librarianpassword@tcp(db:3306)/library';make mi
 or
 $env:DB_URI = 'mysql://librarian:librarianpassword@tcp(db:3306)/library';make migrate-up-docker
 ```
+127.0.0.1 db
 
-## Тест
+## Тесты
+```
+make test
+```
+
 Установить 
 ```
 go install github.com/fullstorydev/grpcurl/cmd/grpcurl@latest
@@ -82,6 +90,7 @@ make test
 make lints
 make migrate-up
 make build-protoc
+make build-mocks
 # ... смотри Makefile
 ```
 
@@ -114,10 +123,14 @@ go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
 go install github.com/golang/mock/mockgen@latest
 ```
 
+Генерация pb
 ```
 make build-protoc
 ```
-
+Генерация моков
+```
+make build-mocks
+```
 Создание миграции
 ```
 make migrate-create-sql name="init"
