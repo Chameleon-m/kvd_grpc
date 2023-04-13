@@ -5,7 +5,8 @@ import (
 	"log"
 
 	"github.com/Chameleon-m/kvd_grpc/internal/app/library/model"
-	. "github.com/Chameleon-m/kvd_grpc/internal/app/library/transport/grpc/handlers"
+	"github.com/Chameleon-m/kvd_grpc/internal/app/library/service"
+	"github.com/Chameleon-m/kvd_grpc/internal/app/library/transport/grpc/handlers"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -43,15 +44,13 @@ func (s *Book) GetByAuthor(ctx context.Context, in *AuthorRequest) (*BookListRes
 		return nil, status.Error(codes.DeadlineExceeded, ctx.Err().Error())
 	}
 
-	// Провреяем ID
-	// TODO можно валидировать через плагин https://github.com/grpc-ecosystem/go-grpc-middleware/tree/main/validator
-	if in.GetId() == 0 {
-		return nil, StatusInvalidArgumentDetails(&ErrBadRequeestFieldId)
-	}
-
 	// Список книг по автору
 	bookList, err := s.service.GetListByAuthor(ctx, in.GetId())
 	if err != nil {
+		// TODO можно валидировать через плагин https://github.com/grpc-ecosystem/go-grpc-middleware/tree/main/validator
+		if service.IsErrInvalidId(err) {
+			return nil, handlers.StatusInvalidArgumentDetails(&handlers.ErrBadRequeestFieldId)
+		}
 		log.Printf("service.GetListByAuthor error: %s", err.Error())
 		return nil, status.Error(codes.FailedPrecondition, err.Error())
 	}
