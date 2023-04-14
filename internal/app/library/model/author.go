@@ -21,7 +21,7 @@ func NewAuthor(id uint64, name string) (*Author, error) {
 	return m, nil
 }
 
-// Validate validatte category
+// Validate validatte
 func (m *Author) Validate() error {
 
 	if m.Name == "" {

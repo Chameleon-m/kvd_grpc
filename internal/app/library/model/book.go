@@ -21,7 +21,7 @@ func NewBook(id uint64, name string) (*Book, error) {
 	return m, nil
 }
 
-// Validate validatte category
+// Validate validatte
 func (m *Book) Validate() error {
 
 	if m.Name == "" {
