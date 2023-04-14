@@ -1,3 +1,5 @@
+//go:build integration
+
 package author
 
 import (
@@ -24,8 +26,8 @@ const (
 
 var listenerBuf *bufconn.Listener
 
-// Модульный тест, который запускает сервер gRPC, а клиент проверяет службу с помощью RPC.
-func TestServer_GetByBook(t *testing.T) {
+// Интеграционный тест, который запускает сервер gRPC, а клиент проверяет службу с помощью RPC.
+func TestIntegrationServer_GetByBook(t *testing.T) {
 	// Запуск обычного сервера gRPC работает на HTTP2
 	srv := initGRPCServerHTTP2()
 	defer srv.Stop()
@@ -53,8 +55,8 @@ func TestServer_GetByBook(t *testing.T) {
 	log.Printf("Res %s", respose.Items)
 }
 
-// Модульный тест написан с использованием Buffconn, т.е без заупска сервера
-func TestServer_GetByBookBufConn(t *testing.T) {
+// Интеграционный тест написан с использованием Buffconn, т.е без заупска сервера
+func TestIntegrationServer_GetByBookBufConn(t *testing.T) {
 	ctx := context.Background()
 	initGRPCServerBuffConn()
 	conn, err := grpc.DialContext(ctx, "bufnet", grpc.WithContextDialer(getBufDialer(listenerBuf)), grpc.WithTransportCredentials(insecure.NewCredentials()))
