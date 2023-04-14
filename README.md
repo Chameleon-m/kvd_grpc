@@ -31,6 +31,11 @@ docker exec -i db sh -c 'exec mysql -uroot -p"$MYSQL_ROOT_PASSWORD"' < testdata/
 ```
 
 ## Запускаем миграции
+```
+go install github.com/golang-migrate/migrate/v4/cmd/migrate@latest
+// -tags 'mysql'
+```
+
 Linux
 ```
 DB_URI='mysql://librarian:librarianpassword@tcp(db:3306)/library' make migrate-up
