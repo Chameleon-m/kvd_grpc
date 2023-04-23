@@ -30,6 +30,13 @@ docker exec -i db sh -c 'exec mysql -uroot -p"$MYSQL_ROOT_PASSWORD"' < testdata/
 ./bin/library_grpc_server
 ```
 
+## Вариант 3 kubernetes
+### dev minikube
+```
+make dev-kube
+```
+host: library-server.dev:443
+
 ## Запускаем миграции
 ```
 go install github.com/golang-migrate/migrate/v4/cmd/migrate@latest

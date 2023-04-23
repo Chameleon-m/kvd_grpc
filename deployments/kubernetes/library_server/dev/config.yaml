@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: library-server-config
+  namespace: library-server  
+  labels:
+    app: library-server
+data:
+  ENV_MODE: dev
+  LIBRARY_SERVER_HOST: ""
+  LIBRARY_SERVER_PORT: "50051"
+# stringData:
+

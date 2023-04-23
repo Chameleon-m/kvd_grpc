@@ -13,7 +13,7 @@ COPY ./cmd/library_grpc_server/main.go ./cmd/library_grpc_server/main.go
 COPY ./internal ./internal
 
 WORKDIR ${location}/cmd/library_grpc_server/
-RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o library_grpc_server .
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -installsuffix cgo -ldflags="-s" -o library_grpc_server .
 
 # Этап 2
 FROM alpine:latest

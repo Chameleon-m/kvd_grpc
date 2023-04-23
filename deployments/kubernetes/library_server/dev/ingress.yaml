@@ -1,0 +1,40 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: library-server-ingress
+  namespace: library-server
+  labels:
+    app: library-server
+  annotations: 
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/backend-protocol: "GRPC"
+    
+spec:
+  ingressClassName: nginx
+  
+  rules:
+  - host: library-server.dev
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: library-server-svc
+            port:
+              # name: grpc
+              number: 50051
+
+  defaultBackend:
+    service:
+      name: library-server-svc
+      port:
+        # name: grpc
+        number: 50051
+
+  tls:
+  - secretName: library-server-host-secret
+    hosts:
+    - library-server.dev
+    
+    

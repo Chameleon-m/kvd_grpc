@@ -1,0 +1,83 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: library-server-db-data
+  namespace: library-server
+  labels:
+    app: library-server
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 500Mi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: library-server-db
+  namespace: library-server
+  labels:
+    app: library-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: library-server
+      tier: mysql
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: library-server
+        tier: mysql
+    spec:
+      containers:
+        - name: mysql
+          image: korolevd/kvado-library-mysql:1.0.0
+          args:
+            - --default-authentication-plugin=mysql_native_password
+          envFrom:
+            - secretRef:
+                name: library-server-db-secret
+          startupProbe:
+            exec:
+              command: ["mysqladmin", "ping", "-ppass"]
+            failureThreshold: 10
+            periodSeconds: 2
+            timeoutSeconds: 1
+          livenessProbe:
+            exec:
+              command: ["mysqladmin", "ping", "-ppass"]
+            failureThreshold: 5
+            periodSeconds: 3
+            timeoutSeconds: 1
+          ports:
+            - containerPort: 3306
+              name: mysql
+          volumeMounts:
+            - name: library-server-db-data
+              mountPath: /var/lib/mysql
+      # restartPolicy: Always
+      volumes:
+        - name: library-server-db-data
+          persistentVolumeClaim:
+            claimName: library-server-db-data
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: library-server-db-svc
+  namespace: library-server
+  labels:
+    app: library-server
+spec:
+  ports:
+    - port: 3306
+      name: mysql
+      targetPort: 3306
+  selector:
+    app: library-server
+    tier: mysql
+  clusterIP: None

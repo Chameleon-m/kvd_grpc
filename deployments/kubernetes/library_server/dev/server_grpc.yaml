@@ -1,0 +1,81 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: library-server
+  namespace: library-server
+  labels:
+    app: library-server
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: library-server
+  strategy: 
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: library-server
+    spec:
+
+      initContainers:
+        - name: library-server-check-mysql
+          image: busybox:1.36
+          command: ['sh', '-c', 'echo -e "Checking MySQL"; while ! nc -z -w 20 library-server-db-svc 3306; do sleep 1; printf "-"; done; echo -e "  >> MySQL has started";']
+
+      containers:
+        - name: library-server
+          image: korolevd/kvado-library-grpc-server
+          imagePullPolicy: Always
+          # resources:
+          #   limits:
+          #     cpu: 100m
+          #     memory: 100Mi
+          #   requests:
+          #     cpu: 50m
+          #     memory: 50Mi
+          envFrom:
+            - secretRef:
+                name: library-server-secret
+            - configMapRef:
+                name: library-server-config
+          startupProbe:
+            grpc:
+              port: 50051
+            failureThreshold: 3
+            periodSeconds: 1
+            timeoutSeconds: 1
+          livenessProbe:
+            grpc:
+              port: 50051
+            failureThreshold: 3
+            periodSeconds: 10
+            timeoutSeconds: 1
+          readinessProbe:
+            grpc:
+              port: 50051
+            successThreshold: 1
+            failureThreshold: 3
+            periodSeconds: 2
+            timeoutSeconds: 1
+          ports:
+            - containerPort: 50051
+              name: grpc
+      # restartPolicy: Always
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: library-server-svc
+  namespace: library-server
+  labels:
+    app: library-server
+spec:
+  ports:
+    - port: 50051
+      targetPort: 50051
+      protocol: TCP
+      name: grpc
+  selector:
+    app: library-server
+  type: ClusterIP

@@ -1,0 +1,41 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: library-server-migration-job
+  namespace: library-server
+  labels:
+    app: library-server
+spec:
+  # Через сколько секунд удалить завершившийся Job вместе с подами и их логами.
+  ttlSecondsAfterFinished: 600
+  # Приведет к немедленному прекращению работы Job’а по истечении заданного количества секунд.
+  # activeDeadlineSeconds: 60
+  # количество попыток
+  backoffLimit: 0
+  completions: 1
+  parallelism: 1
+  template:
+    spec:
+      initContainers:
+        - name: library-server-check-mysql
+          image: busybox:1.36
+          command: ['sh', '-c', 'echo -e "Checking MySQL"; while ! nc -z -w 20 library-server-db-svc 3306; do sleep 1; printf "-"; done; echo -e "  >> MySQL has started";']
+
+      containers:
+        - name: library-server-migration-job
+          image: korolevd/kvado-library-server-migration
+          command: [ "make", "migrate-up" ]
+          env:
+            - name: ENV_MODE
+              valueFrom:
+                configMapKeyRef:
+                  name: library-server-config
+                  key: ENV_MODE
+            - name: DB_URI
+              valueFrom:
+                secretKeyRef:
+                  name: library-server-secret
+                  key: DB_URI
+      # чтобы никогда не перезапускал контейнер в поде; если контейнер в поде упал, то и сам под считается упавшим, то есть завершённым.
+      restartPolicy: Never
+      

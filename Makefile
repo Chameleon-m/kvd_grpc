@@ -7,6 +7,13 @@ endif
 # $(CURDIR) fix old docker version for Windows
 dockerMigrate := docker run --name migrate --rm -i --volume="$(CURDIR)/migrations:/migrations" --network netApplication migrate/migrate:v4.15.2
 
+GIT_HASH ?= $(shell git log --format="%h" -n 1)
+
+# TODO ENV
+DOCKER_USERNAME ?= korolevd
+APPLICATION_SERVER ?= ${DOCKER_USERNAME}/kvado-library-grpc-server
+APPLICATION_SERVER_MIGRATION ?= ${DOCKER_USERNAME}/kvado-library-server-migration
+
 BIN_DIR = $(PWD)/bin
 
 .PHONY: build
@@ -25,7 +32,7 @@ build-server:
 	go build -tags ${ENV_MODE} -o $(BIN_DIR)/library_grpc_server cmd/library_grpc_server/main.go
 
 linux-binaries:
-	CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -tags "${ENV_MODE} netgo" -installsuffix netgo -o $(BIN_DIR)/library_grpc_server cmd/library_grpc_server/main.go
+	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -installsuffix cgo -tags "${ENV_MODE} netgo" -installsuffix netgo -o $(BIN_DIR)/linux_amd64/library_grpc_server cmd/library_grpc_server/main.go
 
 fmt: ## gofmt and goimports all go files
 	find . -name '*.go' -not -wholename './vendor/*' | while read -r file; do gofmt -w -s "$$file"; goimports -w "$$file"; done
@@ -84,3 +91,42 @@ test-coverage:
 
 lints:
 	golangci-lint run ./...
+
+build-docker: build-docker-server build-docker-migration
+build-docker-server: docker-build-push-server docker-build-push-server-latest
+build-docker-migration: docker-build-push-migration docker-build-push-migration-latest
+
+docker-build-push-server:
+	docker build --tag ${APPLICATION_SERVER}:${GIT_HASH} -f deployments/docker/library_server/Dockerfile .
+	docker push ${APPLICATION_SERVER}:${GIT_HASH}
+
+docker-build-push-server-latest:
+	docker build --tag ${APPLICATION_SERVER}:latest -f deployments/docker/library_server/Dockerfile .
+	docker tag ${APPLICATION_SERVER}:latest ${APPLICATION_SERVER}:latest
+	docker push ${APPLICATION_SERVER}:latest
+
+docker-build-push-migration:
+	docker build --tag ${APPLICATION_SERVER_MIGRATION}:${GIT_HASH} -f deployments/docker/library_server_migration/Dockerfile .
+	docker push ${APPLICATION_SERVER_MIGRATION}:${GIT_HASH}
+	
+
+docker-build-push-migration-latest:
+	docker build --tag ${APPLICATION_SERVER_MIGRATION}:latest -f deployments/docker/library_server_migration/Dockerfile .
+	docker tag  ${APPLICATION_SERVER_MIGRATION}:latest ${APPLICATION_SERVER_MIGRATION}:latest
+	docker push ${APPLICATION_SERVER_MIGRATION}:latest
+
+dev-kube: dev-kube-start dev-kube-apply
+
+dev-kube-start:
+	minikube start
+	minikube tunnel
+
+dev-kube-apply:
+	kubectl apply -f deployments/kubernetes/library_server/dev/namespace.yaml
+	kubectl apply -f deployments/kubernetes/library_server/dev/config.yaml
+	kubectl apply -f deployments/kubernetes/library_server/dev/secret.yaml
+	kubectl apply -f deployments/kubernetes/library_server/dev/secret_tls.yaml
+	kubectl apply -f deployments/kubernetes/library_server/dev/db.yaml
+	kubectl apply -f deployments/kubernetes/library_server/dev/migration_up_job.yaml
+	kubectl apply -f deployments/kubernetes/library_server/dev/server_grpc.yaml
+	kubectl apply -f deployments/kubernetes/library_server/dev/ingress.yaml
