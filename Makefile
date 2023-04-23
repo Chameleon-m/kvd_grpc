@@ -128,5 +128,16 @@ dev-kube-apply:
 	kubectl apply -f deployments/kubernetes/library_server/dev/secret_tls.yaml
 	kubectl apply -f deployments/kubernetes/library_server/dev/db.yaml
 	kubectl apply -f deployments/kubernetes/library_server/dev/migration_up_job.yaml
+#   kubectl wait --for=condition=Complete -f deployments/kubernetes/library_server/dev/migration_up_job.yaml --timeout 60s
 	kubectl apply -f deployments/kubernetes/library_server/dev/server_grpc.yaml
 	kubectl apply -f deployments/kubernetes/library_server/dev/ingress.yaml
+
+dev-kube-delete:
+	kubectl delete -f deployments/kubernetes/library_server/dev/ingress.yaml
+	kubectl delete -f deployments/kubernetes/library_server/dev/server_grpc.yaml
+	kubectl delete -f deployments/kubernetes/library_server/dev/migration_up_job.yaml
+	kubectl delete -f deployments/kubernetes/library_server/dev/db.yaml
+	kubectl delete -f deployments/kubernetes/library_server/dev/secret_tls.yaml
+	kubectl delete -f deployments/kubernetes/library_server/dev/secret.yaml
+	kubectl delete -f deployments/kubernetes/library_server/dev/config.yaml
+	kubectl delete -f deployments/kubernetes/library_server/dev/namespace.yaml
