@@ -7,7 +7,4 @@ metadata:
     app: library-server
 data:
   ENV_MODE: dev
-  LIBRARY_SERVER_HOST: ""
-  LIBRARY_SERVER_PORT: "50051"
-# stringData:
-
+  LIBRARY_SERVER_ADDR: "0.0.0.0:50051"

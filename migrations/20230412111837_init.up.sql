@@ -1,5 +1,3 @@
-BEGIN;
-
 CREATE TABLE
     IF NOT EXISTS book(
         `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
@@ -22,5 +20,3 @@ CREATE TABLE
         CONSTRAINT `book_author_book_fk` FOREIGN KEY `book_fk` (`book_id`) REFERENCES `book` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
         CONSTRAINT `book_author_author_fk` FOREIGN KEY `author_fk` (`author_id`) REFERENCES `author` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
     ) ENGINE = INNODB;
-
-COMMIT;

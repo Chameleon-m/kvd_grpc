@@ -3,10 +3,12 @@ package library
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"log"
 	"net"
 	"os"
 	"os/signal"
+	"strconv"
 	"syscall"
 	"time"
 
@@ -24,6 +26,14 @@ import (
 
 // Run library grpc server.
 func RunGRPCServer() {
+
+	defer func() {
+		if err := recover(); err != nil {
+			log.Println("panic occurred: ", err)
+			os.Exit(1)
+		}
+	}()
+
 	log.Print("Server grpc started")
 	defer log.Print("Server grpc exiting")
 
@@ -38,26 +48,30 @@ func RunGRPCServer() {
 	// Настраиваем соединение с DB
 	dbConfig := mysql.NewConfig()
 	dbConfig.Net = "tcp"
-	dbConfig.Addr = os.Getenv("DB_ADDR")
-	dbConfig.User = os.Getenv("DB_USER")
-	dbConfig.Passwd = os.Getenv("DB_PASSWORD")
-	dbConfig.DBName = os.Getenv("DB_NAME")
+	dbConfig.Addr = getEnvReq("DB_ADDR")
+	dbConfig.User = getEnvReq("DB_USER")
+	dbConfig.Passwd = getEnvReq("DB_PASSWORD")
+	dbConfig.DBName = getEnvReq("DB_NAME")
 	// dbConfig.Timeout = time.Second*1
 	// dbConfig.InterpolateParams = true
 	db, err := sql.Open("mysql", dbConfig.FormatDSN())
 	if err != nil {
-		log.Println(err)
-		return
+		log.Panic(err)
 	}
 
+	dbConnMaxLifeTime := getEnvReqInt("DB_CONN_MAX_LIFE_TIME_SEC")
+	dbConnMaxIdleTime := getEnvReqInt("DB_CONN_MAX_IDLE_TIME_SEC")
+	dbMaxOpenConss := getEnvReqInt("DB_MAX_OPEN_CONNNS")
+	dbMaxIdleConns := getEnvReqInt("DB_MAX_IDLE_CONNS")
+
 	// Время жизни соединения
-	db.SetConnMaxLifetime(time.Second * 15)
+	db.SetConnMaxLifetime(time.Second * time.Duration(dbConnMaxLifeTime))
 	// Время ожидания в пуле
-	db.SetConnMaxIdleTime(time.Second * 5)
+	db.SetConnMaxIdleTime(time.Second * time.Duration(dbConnMaxIdleTime))
 	// Максимальное количество соединений
-	db.SetMaxOpenConns(150)
+	db.SetMaxOpenConns(dbMaxOpenConss)
 	// Ограничение размера пула
-	db.SetMaxIdleConns(150)
+	db.SetMaxIdleConns(dbMaxIdleConns)
 	// Закрываем соединение
 	defer func() {
 		if err := db.Close(); err != nil {
@@ -66,26 +80,28 @@ func RunGRPCServer() {
 	}()
 	// Проверяем соединение с базой данных
 	if err := db.PingContext(ctx); err != nil {
-		log.Println(err)
-		return
+		log.Panic(err)
 	}
 	// Передаём логер драйверу mysql
 	if err := mysql.SetLogger(log.Default()); err != nil {
-		log.Println(err)
-		return
+		log.Panic(err)
 	}
 
 	// Слушаем tcp порт
-	host := os.Getenv("LIBRARY_SERVER_HOST")
-	port := os.Getenv("LIBRARY_SERVER_PORT")
-	lsn, err := net.Listen("tcp", net.JoinHostPort(host, port))
+	addr := getEnvReq("LIBRARY_SERVER_ADDR")
+	lsn, err := net.Listen("tcp", addr)
 	if err != nil {
-		log.Printf("failde to listen: %v", err)
-		return
+		log.Panicf("failde to listen: %v", err)
 	}
 
 	// Cоздаём сервер gRPC
 	srv := grpc.NewServer()
+	defer func() {
+		// Завершаем уже запущенные процессы
+		log.Print("Shutting down gracefully gRPC server")
+		srv.GracefulStop()
+		srv.Stop()
+	}()
 	// Регистрируем обработчики книг
 	mysqlBookRepository := repository.NewBookMysqlRepository(db)
 	bookService := service.NewBookService(mysqlBookRepository)
@@ -116,7 +132,7 @@ func RunGRPCServer() {
 		done <- struct{}{}
 	}()
 
-	log.Printf("Starting gRPC listener on host:port %s:%s", host, port)
+	log.Printf("Starting gRPC listener on address %s", addr)
 	go func() {
 		// Запускаем сервер
 		if err := srv.Serve(lsn); err != nil {
@@ -128,8 +144,21 @@ func RunGRPCServer() {
 
 	// Блокируемся и ждём сигнала в канале завершения
 	<-done
+}
 
-	// Завершаем уже запущенные процессы
-	log.Print("Shutting down gracefully, press Ctrl+C again to force")
-	srv.GracefulStop()
+func getEnvReq(env string) string {
+	e := os.Getenv(env)
+	if e == "" {
+		panic(fmt.Errorf("Env %s not set", env))
+	}
+	return e
+}
+
+func getEnvReqInt(env string) int {
+	e := getEnvReq(env)
+	i, err := strconv.Atoi(e)
+	if err != nil {
+		panic(fmt.Errorf("Env %s error %v", env, err))
+	}
+	return i
 }
