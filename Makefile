@@ -126,18 +126,22 @@ dev-kube-apply:
 	kubectl apply -f deployments/kubernetes/library_server/dev/config.yaml
 	kubectl apply -f deployments/kubernetes/library_server/dev/secret.yaml
 	kubectl apply -f deployments/kubernetes/library_server/dev/secret_tls.yaml
+	kubectl apply -f deployments/kubernetes/library_server/dev/db_data.yaml
 	kubectl apply -f deployments/kubernetes/library_server/dev/db.yaml
 	kubectl apply -f deployments/kubernetes/library_server/dev/migration_up_job.yaml
 #   kubectl wait --for=condition=Complete -f deployments/kubernetes/library_server/dev/migration_up_job.yaml --timeout 60s
 	kubectl apply -f deployments/kubernetes/library_server/dev/server_grpc.yaml
 	kubectl apply -f deployments/kubernetes/library_server/dev/ingress.yaml
 
+dev-kube-delete-full: dev-kube-delete 
+	kubectl delete -f deployments/kubernetes/library_server/dev/db_data.yaml --ignore-not-found
+	kubectl delete -f deployments/kubernetes/library_server/dev/namespace.yaml --ignore-not-found
+
 dev-kube-delete:
-	kubectl delete -f deployments/kubernetes/library_server/dev/ingress.yaml
-	kubectl delete -f deployments/kubernetes/library_server/dev/server_grpc.yaml
-	kubectl delete -f deployments/kubernetes/library_server/dev/migration_up_job.yaml
-	kubectl delete -f deployments/kubernetes/library_server/dev/db.yaml
-	kubectl delete -f deployments/kubernetes/library_server/dev/secret_tls.yaml
-	kubectl delete -f deployments/kubernetes/library_server/dev/secret.yaml
-	kubectl delete -f deployments/kubernetes/library_server/dev/config.yaml
-	kubectl delete -f deployments/kubernetes/library_server/dev/namespace.yaml
+	kubectl delete -f deployments/kubernetes/library_server/dev/ingress.yaml --ignore-not-found
+	kubectl delete -f deployments/kubernetes/library_server/dev/server_grpc.yaml --ignore-not-found
+	kubectl delete -f deployments/kubernetes/library_server/dev/migration_up_job.yaml --ignore-not-found
+	kubectl delete -f deployments/kubernetes/library_server/dev/db.yaml --ignore-not-found
+	kubectl delete -f deployments/kubernetes/library_server/dev/secret_tls.yaml --ignore-not-found
+	kubectl delete -f deployments/kubernetes/library_server/dev/secret.yaml --ignore-not-found
+	kubectl delete -f deployments/kubernetes/library_server/dev/config.yaml --ignore-not-found
